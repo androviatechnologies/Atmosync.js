@@ -271,10 +271,47 @@ This document tracks the progress, implementation details, test coverage, and va
 
 ## Phase 7: Developer Integrations & React Support
 
-**Status:** Pending  
-**Scope:**
-- Vanilla JavaScript API polish.
-- `@atmosync/react` provider and custom hooks (`useAtmosphere`, `useScene`, `useWeather`).
+**Status:** Completed  
+**Deliverables:** Separate `atmosync/react` subpath export, React Context & Provider (`AtmosyncProvider`), React hooks (`useAtmosync`, `useScene`, `useWeather`, `useTheme`), optional peerDependencies architecture, and multi-entry tsup builds.
+
+### Key Accomplishments
+1. **React Integration Architecture (`src/react/index.ts`):**
+   - Implemented `AtmosyncProvider`:
+     - Accepts `options` for internal lifecycle instantiation or `instance` for external instance sharing.
+     - Automatically subscribes to all Atmosync events (`sceneChange`, `themeChange`, `timeUpdate`, `weatherUpdate`, `locationUpdate`, `seasonUpdate`).
+     - Safely unmounts and cleans up resources on component unmount.
+   - Built custom hooks:
+     - `useAtmosync()`: Returns `{ atmosync, state, scene, theme, isReady }`.
+     - `useScene()`: Returns `{ scene, setScene, resetScene }` for direct scene manipulations.
+     - `useWeather()`: Returns `{ weather, setWeather }` for reactive weather state and overrides.
+     - `useTheme()`: Returns `{ theme, setCustomPalette }` for reactive palette tracking and customizations.
+   - Safeguards against invoking hooks outside of Provider tree with descriptive developer errors.
+
+2. **Package Architecture & Optional Peer Dependencies:**
+   - Configured `package.json` with subpath exports:
+     - `.` -> `./dist/index.js` (Core vanilla library, 0 runtime dependencies)
+     - `./react` -> `./dist/react.js` (React provider and hooks)
+   - Marked `react` as `peerDependencies` (`>=18.0.0`) with `peerDependenciesMeta: { optional: true }` so vanilla JS applications do not install or bundle React.
+   - Updated `tsup.config.ts` to output distinct ESM, CJS, and DTS bundles for both entry points (`index` and `react`).
+
+3. **Validation & Testing:**
+   - **Unit Tests:** 79/79 tests passing across 14 test suites:
+     - `tests/unit/react-integration.test.ts` (4 tests)
+     - `tests/unit/theme-engine.test.ts` (5 tests)
+     - `tests/unit/transition-engine.test.ts` (3 tests)
+     - `tests/unit/atmosync.test.ts` (14 tests)
+     - `tests/unit/css-renderer.test.ts` (4 tests)
+     - `tests/unit/canvas-renderer.test.ts` (4 tests)
+     - `tests/unit/rendering-manager.test.ts` (3 tests)
+     - `tests/unit/scene-engine.test.ts` (8 tests)
+     - `tests/unit/weather-engine.test.ts` (6 tests)
+     - `tests/unit/open-meteo.test.ts` (2 tests)
+     - `tests/unit/wmo.test.ts` (8 tests)
+     - `tests/unit/location.test.ts` (7 tests)
+     - `tests/unit/season.test.ts` (5 tests)
+     - `tests/unit/time.test.ts` (6 tests)
+   - **Type Checking:** `tsc --noEmit` verified with 0 errors.
+   - **Build Verification:** Dual ESM/CJS/DTS bundles generated for both core (`dist/index.*`) and React (`dist/react.*`).
 
 ---
 
