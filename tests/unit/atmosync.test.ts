@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Atmosync } from "../../src/core/atmosync";
+import { WeatherData, WeatherProvider } from "../../src/types";
 
 describe("Atmosync", () => {
   let atmosync: Atmosync;
@@ -124,6 +125,57 @@ describe("Atmosync", () => {
 
     expect(seasonListener).toHaveBeenCalled();
     expect(sync.getEnvironmentState().season.profile).toBe("indian-subcontinent");
+
+    sync.destroy();
+  });
+
+  it("should support weather provider integration and update scene", async () => {
+    const mockProvider: WeatherProvider = {
+      name: "test-provider",
+      getWeather: vi.fn().mockResolvedValue({
+        condition: "thunderstorm",
+        temperature: 28,
+        cloudCover: 90,
+        timestamp: Date.now(),
+      } as WeatherData),
+    };
+
+    const sync = new Atmosync({
+      location: {
+        enabled: true,
+        latitude: 13.0827,
+        longitude: 80.2707,
+      },
+      weather: {
+        enabled: true,
+        provider: mockProvider,
+      },
+    });
+
+    const weatherListener = vi.fn();
+    sync.on("weatherUpdate", weatherListener);
+
+    await sync.start();
+
+    expect(weatherListener).toHaveBeenCalled();
+    expect(sync.getEnvironmentState().weather.condition).toBe("thunderstorm");
+    expect(sync.getCurrentScene()).toMatch(/-(thunderstorm)$/);
+
+    sync.destroy();
+  });
+
+  it("should allow manual weather overrides with setWeather", async () => {
+    const sync = new Atmosync();
+    await sync.start();
+
+    const weatherListener = vi.fn();
+    sync.on("weatherUpdate", weatherListener);
+
+    sync.setWeather({ condition: "snow", temperature: -2 });
+
+    expect(weatherListener).toHaveBeenCalledWith(expect.objectContaining({ condition: "snow" }));
+    expect(sync.getEnvironmentState().weather.condition).toBe("snow");
+    expect(sync.getCurrentScene()).toMatch(/-snow$/);
 
     sync.destroy();
   });

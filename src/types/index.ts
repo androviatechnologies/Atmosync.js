@@ -4,6 +4,16 @@ export type Hemisphere = "north" | "south";
 
 export type AstronomicalSeason = "spring" | "summer" | "autumn" | "winter";
 
+export type WeatherCondition =
+  | "clear"
+  | "partly-cloudy"
+  | "cloudy"
+  | "fog"
+  | "drizzle"
+  | "rain"
+  | "snow"
+  | "thunderstorm";
+
 export interface TimeState {
   hour: number;
   minute: number;
@@ -13,10 +23,23 @@ export interface TimeState {
 }
 
 export interface WeatherState {
-  condition: string;
+  condition: WeatherCondition;
   temperature?: number;
   cloudCover?: number;
   precipitation?: number;
+  weatherCode?: number;
+  isDay?: boolean;
+  sunrise?: string;
+  sunset?: string;
+}
+
+export interface WeatherData extends WeatherState {
+  timestamp: number;
+}
+
+export interface WeatherProvider {
+  readonly name: string;
+  getWeather(latitude: number, longitude: number): Promise<WeatherData>;
 }
 
 export interface LocationState {
@@ -66,8 +89,9 @@ export interface AtmosyncOptions {
   };
   weather?: {
     enabled?: boolean;
-    provider?: "open-meteo" | "manual";
+    provider?: "open-meteo" | WeatherProvider;
     refreshInterval?: number;
+    cacheTtl?: number;
   };
   season?: {
     enabled?: boolean;

@@ -11,10 +11,16 @@ export {
   calculateAstronomicalSeason,
   BUILT_IN_SEASON_PROFILES,
 } from "./engines/season";
+export { WeatherEngine, type WeatherEngineOptions } from "./engines/weather";
+export { OpenMeteoProvider } from "./providers/weather/open-meteo";
+export { mapWmoCodeToCondition } from "./providers/weather/wmo";
 export type {
   TimePeriod,
   TimeState,
   WeatherState,
+  WeatherData,
+  WeatherProvider,
+  WeatherCondition,
   LocationState,
   SeasonState,
   EnvironmentState,

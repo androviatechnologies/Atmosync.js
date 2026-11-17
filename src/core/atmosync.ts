@@ -1,12 +1,16 @@
 import { LocationEngine } from "../engines/location";
 import { SeasonEngine } from "../engines/season";
 import { TimeEngine } from "../engines/time";
+import { WeatherEngine } from "../engines/weather";
 import {
   AtmosyncEventType,
   AtmosyncOptions,
   EnvironmentState,
   EventCallback,
   RegionalSeasonProfile,
+  WeatherData,
+  WeatherProvider,
+  WeatherState,
 } from "../types";
 
 export class Atmosync {
@@ -14,6 +18,7 @@ export class Atmosync {
   private timeEngine: TimeEngine;
   private locationEngine: LocationEngine;
   private seasonEngine: SeasonEngine;
+  private weatherEngine: WeatherEngine;
   private listeners: Map<AtmosyncEventType, Set<EventCallback>> = new Map();
   private currentScene: string = "default";
   private manualSceneOverride: string | null = null;
@@ -49,6 +54,11 @@ export class Atmosync {
     this.timeEngine = new TimeEngine();
     this.locationEngine = new LocationEngine();
     this.seasonEngine = new SeasonEngine(options.season?.customProfiles);
+    this.weatherEngine = new WeatherEngine({
+      provider: this.options.weather?.provider,
+      refreshInterval: this.options.weather?.refreshInterval,
+      cacheTtl: this.options.weather?.cacheTtl,
+    });
     this.currentScene = this.options.initialScene || "default";
   }
 
@@ -93,14 +103,30 @@ export class Atmosync {
       this.refreshSeason();
     }
 
-    // 3. Resolve Time
+    // 3. Resolve Weather
+    if (this.options.weather?.enabled && typeof this.state.location.latitude === "number" && typeof this.state.location.longitude === "number") {
+      await this.refreshWeather();
+
+      // Start periodic weather refresh
+      this.weatherEngine.start(
+        this.state.location.latitude,
+        this.state.location.longitude,
+        this.options.weather.refreshInterval,
+        (weatherData) => {
+          this.applyWeatherData(weatherData);
+          this.evaluateScene();
+        }
+      );
+    }
+
+    // 4. Resolve Time
     if (this.options.time?.enabled) {
       const currentTime = this.timeEngine.getTimeState();
-      this.state.time = currentTime;
+      this.state.time = { ...this.state.time, ...currentTime };
 
       if (this.options.time.autoUpdate) {
         this.timeEngine.start(this.options.time.updateInterval, (updatedTime) => {
-          this.state.time = updatedTime;
+          this.state.time = { ...this.state.time, ...updatedTime };
           this.emit("timeUpdate", updatedTime);
           this.evaluateScene();
         });
@@ -128,7 +154,21 @@ export class Atmosync {
       this.refreshSeason();
     }
 
+    if (this.options.weather?.enabled && this.isRunning) {
+      await this.refreshWeather();
+    }
+
     this.evaluateScene();
+  }
+
+  public setWeather(weather: Partial<WeatherState>): void {
+    this.state.weather = { ...this.state.weather, ...weather };
+    this.emit("weatherUpdate", this.state.weather);
+    this.evaluateScene();
+  }
+
+  public setWeatherProvider(provider: WeatherProvider): void {
+    this.weatherEngine.setProvider(provider);
   }
 
   public setSeasonProfile(profileId: string): void {
@@ -168,6 +208,7 @@ export class Atmosync {
   public destroy(): void {
     this.isRunning = false;
     this.timeEngine.stop();
+    this.weatherEngine.stop();
     this.listeners.clear();
   }
 
@@ -184,6 +225,40 @@ export class Atmosync {
     } catch (err) {
       this.emit("error", err);
     }
+  }
+
+  private async refreshWeather(): Promise<void> {
+    const { latitude, longitude } = this.state.location;
+    if (typeof latitude !== "number" || typeof longitude !== "number") return;
+
+    try {
+      const weatherData = await this.weatherEngine.fetchWeather(latitude, longitude);
+      this.applyWeatherData(weatherData);
+    } catch (err) {
+      this.emit("error", err);
+    }
+  }
+
+  private applyWeatherData(weatherData: WeatherData): void {
+    this.state.weather = {
+      condition: weatherData.condition,
+      temperature: weatherData.temperature,
+      cloudCover: weatherData.cloudCover,
+      precipitation: weatherData.precipitation,
+      weatherCode: weatherData.weatherCode,
+      isDay: weatherData.isDay,
+      sunrise: weatherData.sunrise,
+      sunset: weatherData.sunset,
+    };
+
+    if (weatherData.sunrise) {
+      this.state.time.sunrise = weatherData.sunrise;
+    }
+    if (weatherData.sunset) {
+      this.state.time.sunset = weatherData.sunset;
+    }
+
+    this.emit("weatherUpdate", this.state.weather);
   }
 
   private refreshSeason(): void {

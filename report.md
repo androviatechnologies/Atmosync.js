@@ -70,12 +70,41 @@ This document tracks the progress, implementation details, test coverage, and va
 
 ## Phase 3: Weather Integration
 
-**Status:** Pending  
-**Scope:**
-- Weather provider adapter interface.
-- Open-Meteo API integration.
-- Weather code mapping to normalized atmospheric conditions.
-- Caching, throttling, and offline fallback mechanisms.
+**Status:** Completed  
+**Deliverables:** WeatherProvider interface, OpenMeteoProvider, WMO code mapper, WeatherEngine with in-memory caching and offline fallback, Atmosync weather integration.
+
+### Key Accomplishments
+1. **Weather Provider Architecture (`src/providers/weather/`):**
+   - Defined generic `WeatherProvider` interface in `src/types/index.ts`.
+   - Built `OpenMeteoProvider` (`src/providers/weather/open-meteo.ts`): Queries Open-Meteo REST API for current conditions (temperature, cloud cover, precipitation, WMO code, day/night) and solar data (sunrise, sunset).
+   - Built `mapWmoCodeToCondition` (`src/providers/weather/wmo.ts`): Normalizes 0–99 WMO interpretation codes to standardized atmospheric conditions (`clear`, `partly-cloudy`, `cloudy`, `fog`, `drizzle`, `rain`, `snow`, `thunderstorm`).
+
+2. **Weather Engine & Resiliency (`src/engines/weather/index.ts`):**
+   - Built `WeatherEngine` featuring:
+     - Configurable in-memory caching (default 15 minutes TTL) to prevent rate limits and excessive API calls.
+     - Location coordinate drift invalidation.
+     - Robust offline/network fallback: retains and serves last-known cached data if network requests fail.
+     - Resilient default fallback object if no prior cached weather is available.
+     - Configurable background polling intervals with `start()` and `stop()`.
+
+3. **Core Integration (`src/core/atmosync.ts`):**
+   - Automatically fetches and updates weather when location coordinates are resolved.
+   - Updates `sunrise` and `sunset` times on `TimeState` from weather provider daily solar data.
+   - Emits `weatherUpdate` event upon data arrival.
+   - Added `setWeather(weather)` for manual state overrides and testing.
+   - Added `setWeatherProvider(provider)` allowing custom developer integrations.
+
+4. **Validation & Testing:**
+   - **Unit Tests:** 44/44 tests passing across 7 test suites:
+     - `tests/unit/wmo.test.ts` (8 tests)
+     - `tests/unit/open-meteo.test.ts` (2 tests)
+     - `tests/unit/weather-engine.test.ts` (6 tests)
+     - `tests/unit/location.test.ts` (7 tests)
+     - `tests/unit/season.test.ts` (5 tests)
+     - `tests/unit/time.test.ts` (6 tests)
+     - `tests/unit/atmosync.test.ts` (10 tests)
+   - **Type Checking:** `tsc --noEmit` verified with 0 errors.
+   - **Build Verification:** Dual ESM/CJS bundles generated cleanly (`dist/index.js`, `dist/index.cjs`, `dist/index.d.ts`).
 
 ---
 
