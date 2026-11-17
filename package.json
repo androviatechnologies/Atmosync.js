@@ -1,0 +1,47 @@
+{
+  "name": "atmosync",
+  "version": "0.1.0",
+  "description": "Dynamically adapt website backgrounds to local time, weather, location, and season",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "background",
+    "environment",
+    "weather",
+    "time",
+    "sky",
+    "atmosphere",
+    "dynamic-theme"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.7"
+  }
+}
