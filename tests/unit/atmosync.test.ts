@@ -62,4 +62,69 @@ describe("Atmosync", () => {
 
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it("should support location and season configuration on start", async () => {
+    const sync = new Atmosync({
+      location: {
+        enabled: true,
+        latitude: -33.8688,
+        longitude: 151.2093, // Sydney
+      },
+      season: {
+        enabled: true,
+        region: "astronomical",
+      },
+    });
+
+    const locationListener = vi.fn();
+    const seasonListener = vi.fn();
+
+    sync.on("locationUpdate", locationListener);
+    sync.on("seasonUpdate", seasonListener);
+
+    await sync.start();
+
+    expect(locationListener).toHaveBeenCalledTimes(1);
+    expect(seasonListener).toHaveBeenCalledTimes(1);
+
+    const state = sync.getEnvironmentState();
+    expect(state.location.latitude).toBe(-33.8688);
+    expect(state.location.hemisphere).toBe("south");
+    expect(state.season.profile).toBe("astronomical");
+
+    sync.destroy();
+  });
+
+  it("should update location dynamically and emit locationUpdate", async () => {
+    const sync = new Atmosync({
+      season: { enabled: true, region: "tropical" },
+    });
+
+    const locationListener = vi.fn();
+    sync.on("locationUpdate", locationListener);
+
+    await sync.setLocation({ latitude: 1.3521, longitude: 103.8198 }); // Singapore
+
+    expect(locationListener).toHaveBeenCalled();
+    const state = sync.getEnvironmentState();
+    expect(state.location.hemisphere).toBe("north");
+    expect(state.season.profile).toBe("tropical");
+
+    sync.destroy();
+  });
+
+  it("should update regional season profile dynamically", async () => {
+    const sync = new Atmosync();
+    await sync.start();
+
+    const seasonListener = vi.fn();
+    sync.on("seasonUpdate", seasonListener);
+
+    sync.setSeasonProfile("indian-subcontinent");
+
+    expect(seasonListener).toHaveBeenCalled();
+    expect(sync.getEnvironmentState().season.profile).toBe("indian-subcontinent");
+
+    sync.destroy();
+  });
 });

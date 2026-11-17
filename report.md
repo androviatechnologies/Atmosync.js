@@ -32,13 +32,39 @@ This document tracks the progress, implementation details, test coverage, and va
 
 ## Phase 2: Environment Detection Engines
 
-**Status:** Pending  
-**Scope:**
-- Astronomical season calculation.
-- Configurable regional climate profiles.
-- Coordinate handling & browser Geolocation API abstraction.
-- Timezone detection via `Intl` and hemisphere calculation.
-- Unified environment state synchronization.
+**Status:** Completed  
+**Deliverables:** LocationEngine, Browser Geolocation abstraction, Timezone & Hemisphere resolution, Astronomical season calculator, Regional climate profiles, and state integration.
+
+### Key Accomplishments
+1. **Location Engine (`src/engines/location/index.ts`):**
+   - Implemented `determineHemisphere`: Computes `"north"` or `"south"` from latitude coordinates.
+   - Implemented `detectTimezone`: Retrieves local IANA timezone using `Intl.DateTimeFormat` with clean `"UTC"` fallback.
+   - Built `LocationEngine`:
+     - Seamless browser Geolocation API abstraction with timeout, cache control, and graceful error/denial recovery.
+     - Supports manual latitude/longitude input with immediate hemisphere computation.
+     - Graceful SSR and Node environment compatibility.
+
+2. **Season Engine (`src/engines/season/index.ts`):**
+   - Implemented `calculateAstronomicalSeason`: Computes astronomical seasons (`spring`, `summer`, `autumn`, `winter`) based on date and hemisphere inversion (Northern vs. Southern hemisphere solstices/equinoxes).
+   - Built configurable `SeasonEngine` with built-in profiles:
+     - `astronomical` (standard 4-season astronomical cycle)
+     - `tropical` (wet / dry cycles)
+     - `indian-subcontinent` (winter, summer, monsoon, post-monsoon cycles)
+   - Added custom regional profile registration support (`registerProfile`) enabling arbitrary month-range season configurations.
+
+3. **Core Integration (`src/core/atmosync.ts`):**
+   - Integrated both engines into `Atmosync` lifecycle.
+   - Added reactive events: `locationUpdate` and `seasonUpdate`.
+   - Added runtime APIs: `setLocation(coords)`, `setSeasonProfile(profileId)`, and `registerSeasonProfile(profile)`.
+
+4. **Validation & Testing:**
+   - **Unit Tests:** 26/26 tests passing across 4 test suites:
+     - `tests/unit/location.test.ts` (7 tests)
+     - `tests/unit/season.test.ts` (5 tests)
+     - `tests/unit/time.test.ts` (6 tests)
+     - `tests/unit/atmosync.test.ts` (8 tests)
+   - **Type Checking:** `tsc --noEmit` verified with 0 errors.
+   - **Build Verification:** ESM/CJS bundles updated (`dist/index.js`, `dist/index.cjs`, `dist/index.d.ts`).
 
 ---
 
