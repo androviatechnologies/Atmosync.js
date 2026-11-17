@@ -14,6 +14,9 @@ export {
 export { WeatherEngine, type WeatherEngineOptions } from "./engines/weather";
 export { SceneEngine } from "./engines/scene";
 export { DEFAULT_SCENES } from "./scenes/defaults";
+export { CssRenderer } from "./renderers/css";
+export { CanvasRenderer, type CanvasRendererOptions } from "./renderers/canvas";
+export { RenderingManager } from "./renderers/manager";
 export { OpenMeteoProvider } from "./providers/weather/open-meteo";
 export { mapWmoCodeToCondition } from "./providers/weather/wmo";
 export type {
@@ -38,4 +41,8 @@ export type {
   SceneRule,
   CelestialBody,
   PrecipitationType,
+  Renderer,
+  RendererType,
+  RenderQuality,
+  RendererOptions,
 } from "./types";

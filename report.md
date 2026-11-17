@@ -164,11 +164,51 @@ This document tracks the progress, implementation details, test coverage, and va
 
 ## Phase 5: Rendering Engine
 
-**Status:** Pending  
-**Scope:**
-- CSS Renderer for lightweight atmospheric gradients.
-- Canvas 2D Renderer for dynamic effects (sky, clouds, stars, rain, snow).
-- Performance controls (FPS capping, pause in background tabs).
+**Status:** Completed  
+**Deliverables:** CssRenderer, CanvasRenderer 2D particle systems (stars, clouds, rain, snow, lightning, celestial glow), RenderingManager coordinator, automatic tab visibility pause/resume, and Atmosync lifecycle controls.
+
+### Key Accomplishments
+1. **Lightweight CSS Renderer (`src/renderers/css/index.ts`):**
+   - Implemented `CssRenderer` mounting an isolated background element behind target content.
+   - Smooth CSS transitions (`transition: background 1.5s, opacity 1.5s`).
+   - Automatically injects CSS custom properties on target elements:
+     - `--atmosync-sky-top` & `--atmosync-sky-bottom`
+     - `--atmosync-brightness`
+     - `--atmosync-ambient`
+     - `--atmosync-is-night`
+   - Complete SSR and Node environment safety.
+
+2. **Canvas 2D Renderer (`src/renderers/canvas/index.ts`):**
+   - Built responsive, high-DPI canvas renderer with particle effects:
+     - **Sky:** Linear gradients with smooth atmospheric horizon shifts.
+     - **Celestial Orbs:** Glowing sun / moon rendering with radial atmospheric haze.
+     - **Stars:** Nocturnal twinkling starfield with sinusoidal alpha oscillation.
+     - **Clouds:** Soft volumetric cloud puff clusters with density-driven transparency.
+     - **Precipitation:** High-performance rain streaks and drifting snow flakes with horizontal swinging oscillation.
+     - **Thunderstorm Flash:** Randomized atmospheric lightning flash overlays for severe storms.
+   - **Quality Scaling:** Dynamic particle budget scaling for `high`, `medium`, and `low` performance tiers.
+   - **Battery & CPU Conservation:** Automatic `visibilitychange` listener that pauses RAF loops when browser tabs are hidden/backgrounded and resumes when focused.
+
+3. **Rendering Manager & Core Controls (`src/renderers/manager.ts` & `src/core/atmosync.ts`):**
+   - Centralized renderer factory and mounting coordinator.
+   - Integrated `.pause()` and `.resume()` on `Atmosync` for external animation lifecycle controls.
+   - Clean element detachment and listener unbinding upon `.destroy()`.
+
+4. **Validation & Testing:**
+   - **Unit Tests:** 65/65 tests passing across 11 test suites:
+     - `tests/unit/css-renderer.test.ts` (4 tests)
+     - `tests/unit/canvas-renderer.test.ts` (4 tests)
+     - `tests/unit/rendering-manager.test.ts` (3 tests)
+     - `tests/unit/atmosync.test.ts` (12 tests)
+     - `tests/unit/scene-engine.test.ts` (8 tests)
+     - `tests/unit/weather-engine.test.ts` (6 tests)
+     - `tests/unit/open-meteo.test.ts` (2 tests)
+     - `tests/unit/wmo.test.ts` (8 tests)
+     - `tests/unit/location.test.ts` (7 tests)
+     - `tests/unit/season.test.ts` (5 tests)
+     - `tests/unit/time.test.ts` (6 tests)
+   - **Type Checking:** `tsc --noEmit` verified with 0 errors.
+   - **Build Verification:** Dual ESM/CJS bundles updated (`dist/index.js`, `dist/index.cjs`, `dist/index.d.ts`).
 
 ---
 

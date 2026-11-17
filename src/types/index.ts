@@ -18,6 +18,10 @@ export type CelestialBody = "sun" | "moon" | "none";
 
 export type PrecipitationType = "rain" | "snow" | "drizzle" | "none";
 
+export type RendererType = "css" | "canvas";
+
+export type RenderQuality = "low" | "medium" | "high";
+
 export interface SceneLayerConfig {
   sky: {
     gradient: [string, string];
@@ -57,6 +61,23 @@ export interface SceneRule {
   priority: number;
   match: (env: EnvironmentState) => boolean;
   createScene: (env: EnvironmentState) => SceneConfig;
+}
+
+export interface RendererOptions {
+  type?: RendererType;
+  quality?: RenderQuality;
+  target?: any; // HTMLElement or CSS selector string
+  animation?: boolean;
+  fpsLimit?: number;
+}
+
+export interface Renderer {
+  readonly type: RendererType;
+  mount(target: any): void;
+  render(scene: SceneConfig): void;
+  pause(): void;
+  resume(): void;
+  destroy(): void;
 }
 
 export interface TimeState {
@@ -141,6 +162,7 @@ export interface AtmosyncOptions {
     region?: "auto" | "astronomical" | "tropical" | "indian-subcontinent" | string;
     customProfiles?: Record<string, RegionalSeasonProfile>;
   };
+  renderer?: RendererOptions;
   initialScene?: string;
 }
 

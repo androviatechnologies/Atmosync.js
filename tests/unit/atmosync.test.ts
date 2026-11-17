@@ -210,4 +210,14 @@ describe("Atmosync", () => {
 
     sync.destroy();
   });
+
+  it("should support pause and resume controls", async () => {
+    const sync = new Atmosync();
+    await sync.start();
+
+    expect(() => sync.pause()).not.toThrow();
+    expect(() => sync.resume()).not.toThrow();
+
+    sync.destroy();
+  });
 });

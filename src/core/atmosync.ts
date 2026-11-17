@@ -3,6 +3,7 @@ import { SceneEngine } from "../engines/scene";
 import { SeasonEngine } from "../engines/season";
 import { TimeEngine } from "../engines/time";
 import { WeatherEngine } from "../engines/weather";
+import { RenderingManager } from "../renderers/manager";
 import { DEFAULT_SCENES } from "../scenes/defaults";
 import {
   AtmosyncEventType,
@@ -24,6 +25,7 @@ export class Atmosync {
   private seasonEngine: SeasonEngine;
   private weatherEngine: WeatherEngine;
   private sceneEngine: SceneEngine;
+  private renderingManager: RenderingManager;
   private listeners: Map<AtmosyncEventType, Set<EventCallback>> = new Map();
   private currentScene: SceneConfig;
   private manualSceneOverride: SceneConfig | null = null;
@@ -53,6 +55,7 @@ export class Atmosync {
       location: { enabled: false, autoDetect: false, ...options.location },
       weather: { enabled: false, provider: "open-meteo", refreshInterval: 900000, ...options.weather },
       season: { enabled: false, region: "auto", ...options.season },
+      renderer: { type: "canvas", quality: "high", animation: true, ...options.renderer },
       initialScene: options.initialScene || "default",
     };
 
@@ -65,6 +68,7 @@ export class Atmosync {
       cacheTtl: this.options.weather?.cacheTtl,
     });
     this.sceneEngine = new SceneEngine();
+    this.renderingManager = new RenderingManager(this.options.renderer);
 
     const initial = this.sceneEngine.getSceneById(this.options.initialScene || "default");
     this.currentScene = initial || DEFAULT_SCENES.default;
@@ -101,17 +105,22 @@ export class Atmosync {
     if (this.isRunning) return;
     this.isRunning = true;
 
-    // 1. Resolve Location
+    // 1. Mount Renderer
+    if (typeof document !== "undefined") {
+      this.renderingManager.mount(this.options.renderer?.target);
+    }
+
+    // 2. Resolve Location
     if (this.options.location?.enabled) {
       await this.refreshLocation();
     }
 
-    // 2. Resolve Season
+    // 3. Resolve Season
     if (this.options.season?.enabled) {
       this.refreshSeason();
     }
 
-    // 3. Resolve Weather
+    // 4. Resolve Weather
     if (
       this.options.weather?.enabled &&
       typeof this.state.location.latitude === "number" &&
@@ -131,7 +140,7 @@ export class Atmosync {
       );
     }
 
-    // 4. Resolve Time
+    // 5. Resolve Time
     if (this.options.time?.enabled) {
       const currentTime = this.timeEngine.getTimeState();
       this.state.time = { ...this.state.time, ...currentTime };
@@ -235,6 +244,19 @@ export class Atmosync {
     this.evaluateScene();
   }
 
+  public pause(): void {
+    this.renderingManager.pause();
+  }
+
+  public resume(): void {
+    this.renderingManager.resume();
+  }
+
+  public mount(target: any): void {
+    this.renderingManager.mount(target);
+    this.renderingManager.render(this.currentScene);
+  }
+
   public getCurrentScene(): SceneConfig {
     return this.currentScene;
   }
@@ -247,6 +269,7 @@ export class Atmosync {
     this.isRunning = false;
     this.timeEngine.stop();
     this.weatherEngine.stop();
+    this.renderingManager.destroy();
     this.listeners.clear();
   }
 
@@ -319,8 +342,13 @@ export class Atmosync {
   }
 
   private updateScene(newScene: SceneConfig): void {
-    if (this.currentScene.id !== newScene.id) {
-      this.currentScene = newScene;
+    const hasChanged = this.currentScene.id !== newScene.id;
+    this.currentScene = newScene;
+
+    // Update renderer
+    this.renderingManager.render(newScene);
+
+    if (hasChanged) {
       this.emit("sceneChange", newScene);
     }
   }
