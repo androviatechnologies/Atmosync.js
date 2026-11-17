@@ -1,13 +1,17 @@
 import { LocationEngine } from "../engines/location";
+import { SceneEngine } from "../engines/scene";
 import { SeasonEngine } from "../engines/season";
 import { TimeEngine } from "../engines/time";
 import { WeatherEngine } from "../engines/weather";
+import { DEFAULT_SCENES } from "../scenes/defaults";
 import {
   AtmosyncEventType,
   AtmosyncOptions,
   EnvironmentState,
   EventCallback,
   RegionalSeasonProfile,
+  SceneConfig,
+  SceneRule,
   WeatherData,
   WeatherProvider,
   WeatherState,
@@ -19,9 +23,10 @@ export class Atmosync {
   private locationEngine: LocationEngine;
   private seasonEngine: SeasonEngine;
   private weatherEngine: WeatherEngine;
+  private sceneEngine: SceneEngine;
   private listeners: Map<AtmosyncEventType, Set<EventCallback>> = new Map();
-  private currentScene: string = "default";
-  private manualSceneOverride: string | null = null;
+  private currentScene: SceneConfig;
+  private manualSceneOverride: SceneConfig | null = null;
   private isRunning: boolean = false;
 
   private state: EnvironmentState = {
@@ -59,7 +64,10 @@ export class Atmosync {
       refreshInterval: this.options.weather?.refreshInterval,
       cacheTtl: this.options.weather?.cacheTtl,
     });
-    this.currentScene = this.options.initialScene || "default";
+    this.sceneEngine = new SceneEngine();
+
+    const initial = this.sceneEngine.getSceneById(this.options.initialScene || "default");
+    this.currentScene = initial || DEFAULT_SCENES.default;
   }
 
   public on(event: AtmosyncEventType, callback: EventCallback): void {
@@ -104,7 +112,11 @@ export class Atmosync {
     }
 
     // 3. Resolve Weather
-    if (this.options.weather?.enabled && typeof this.state.location.latitude === "number" && typeof this.state.location.longitude === "number") {
+    if (
+      this.options.weather?.enabled &&
+      typeof this.state.location.latitude === "number" &&
+      typeof this.state.location.longitude === "number"
+    ) {
       await this.refreshWeather();
 
       // Start periodic weather refresh
@@ -162,7 +174,7 @@ export class Atmosync {
   }
 
   public setWeather(weather: Partial<WeatherState>): void {
-    this.state.weather = { ...this.state.weather, ...weather };
+    this.state.weather = { ...this.state.weather, ...weather } as WeatherState;
     this.emit("weatherUpdate", this.state.weather);
     this.evaluateScene();
   }
@@ -187,9 +199,35 @@ export class Atmosync {
     this.seasonEngine.registerProfile(profile);
   }
 
-  public setScene(sceneName: string): void {
-    this.manualSceneOverride = sceneName;
-    this.updateScene(sceneName);
+  public registerSceneRule(rule: SceneRule): void {
+    this.sceneEngine.registerRule(rule);
+    this.evaluateScene();
+  }
+
+  public registerCustomScene(scene: SceneConfig): void {
+    this.sceneEngine.registerCustomScene(scene);
+  }
+
+  public setScene(scene: string | SceneConfig): void {
+    if (typeof scene === "string") {
+      const targetScene = this.sceneEngine.getSceneById(scene);
+      if (targetScene) {
+        this.manualSceneOverride = targetScene;
+        this.updateScene(targetScene);
+      } else {
+        // Fallback custom scene
+        const custom: SceneConfig = {
+          ...DEFAULT_SCENES.default,
+          id: scene,
+          name: scene,
+        };
+        this.manualSceneOverride = custom;
+        this.updateScene(custom);
+      }
+    } else {
+      this.manualSceneOverride = scene;
+      this.updateScene(scene);
+    }
   }
 
   public resetScene(): void {
@@ -197,7 +235,7 @@ export class Atmosync {
     this.evaluateScene();
   }
 
-  public getCurrentScene(): string {
+  public getCurrentScene(): SceneConfig {
     return this.currentScene;
   }
 
@@ -276,13 +314,12 @@ export class Atmosync {
       return;
     }
 
-    const { period } = this.state.time;
-    const computedScene = `${period}-${this.state.weather.condition}`;
-    this.updateScene(computedScene);
+    const nextScene = this.sceneEngine.evaluate(this.state);
+    this.updateScene(nextScene);
   }
 
-  private updateScene(newScene: string): void {
-    if (this.currentScene !== newScene) {
+  private updateScene(newScene: SceneConfig): void {
+    if (this.currentScene.id !== newScene.id) {
       this.currentScene = newScene;
       this.emit("sceneChange", newScene);
     }

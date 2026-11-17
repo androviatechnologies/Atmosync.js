@@ -12,6 +12,8 @@ export {
   BUILT_IN_SEASON_PROFILES,
 } from "./engines/season";
 export { WeatherEngine, type WeatherEngineOptions } from "./engines/weather";
+export { SceneEngine } from "./engines/scene";
+export { DEFAULT_SCENES } from "./scenes/defaults";
 export { OpenMeteoProvider } from "./providers/weather/open-meteo";
 export { mapWmoCodeToCondition } from "./providers/weather/wmo";
 export type {
@@ -31,4 +33,9 @@ export type {
   AstronomicalSeason,
   SeasonRule,
   RegionalSeasonProfile,
+  SceneConfig,
+  SceneLayerConfig,
+  SceneRule,
+  CelestialBody,
+  PrecipitationType,
 } from "./types";

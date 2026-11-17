@@ -110,11 +110,55 @@ This document tracks the progress, implementation details, test coverage, and va
 
 ## Phase 4: Scene Decision Engine
 
-**Status:** Pending  
-**Scope:**
-- Normalized scene registry.
-- Multidimensional rule engine (combining time, weather, location, and season).
-- Composition hierarchy and priority overrides.
+**Status:** Completed  
+**Deliverables:** Normalized scene presets, multidimensional SceneEngine, priority-based evaluation, layer-based scene configurations, custom scene and rule registration.
+
+### Key Accomplishments
+1. **Normalized Scene Layer Architecture (`src/types/index.ts` & `src/scenes/defaults.ts`):**
+   - Defined structured `SceneConfig` and `SceneLayerConfig` covering visual layers:
+     - `sky`: Color gradients and relative brightness.
+     - `celestial`: Celestial bodies (`sun`, `moon`, `none`) and visibility.
+     - `clouds`: Density (`0` to `1`) and classification (`sparse`, `scattered`, `overcast`, `none`).
+     - `precipitation`: Type (`rain`, `snow`, `drizzle`, `none`) and intensity.
+     - `fog`: Visibility and atmospheric density.
+     - `lighting`: Ambient color palette and day/night state.
+   - Built 17 normalized atmospheric scene presets:
+     - Daytime: `sunny-day`, `cloudy-day`, `foggy-day`, `rainy-day`, `snowy-day`, `thunderstorm-day`
+     - Morning / Sunrise: `sunrise`
+     - Evening / Sunset: `golden-sunset`, `cloudy-evening`, `rainy-sunset`, `thunderstorm-evening`
+     - Night: `starry-night`, `cloudy-night`, `foggy-night`, `rainy-night`, `snowy-night`, `thunderstorm-night`
+     - Safe fallback: `default`
+
+2. **Multidimensional SceneEngine (`src/engines/scene/index.ts`):**
+   - Implemented descending priority rule evaluation:
+     - Priority 100: Severe storm events (`thunderstorm`)
+     - Priority 80: Freezing precipitation (`snow`)
+     - Priority 70: Liquid precipitation (`rain`, `drizzle`)
+     - Priority 60: Atmospheric obscurity (`fog`)
+     - Priority 50: Golden hour transitions (`sunrise`, `golden-sunset`)
+     - Priority 40: Cloud coverage (`cloudy`)
+     - Priority 20: Clean diurnal base states (`morning`, `afternoon`, `evening`, `night`)
+   - Added `registerRule` allowing developers to inject custom rules with explicit priorities.
+   - Added `registerCustomScene` allowing developers to define and register custom atmospheric scenes.
+
+3. **Core Integration (`src/core/atmosync.ts`):**
+   - Transitioned `Atmosync` from primitive strings to rich `SceneConfig` instances.
+   - Dynamic re-evaluation of scene layers whenever environmental state (time, weather, season, location) changes.
+   - Upgraded `.setScene()` to accept preset string IDs or arbitrary custom `SceneConfig` objects.
+   - Added `.registerSceneRule()` and `.registerCustomScene()`.
+
+4. **Validation & Testing:**
+   - **Unit Tests:** 53/53 tests passing across 8 test suites:
+     - `tests/unit/scene-engine.test.ts` (8 tests)
+     - `tests/unit/atmosync.test.ts` (11 tests)
+     - `tests/unit/weather-engine.test.ts` (6 tests)
+     - `tests/unit/open-meteo.test.ts` (2 tests)
+     - `tests/unit/wmo.test.ts` (8 tests)
+     - `tests/unit/location.test.ts` (7 tests)
+     - `tests/unit/season.test.ts` (5 tests)
+     - `tests/unit/time.test.ts` (6 tests)
+   - **Type Checking:** `tsc --noEmit` verified with 0 errors.
+   - **Build Verification:** Dual ESM/CJS bundles updated (`dist/index.js`, `dist/index.cjs`, `dist/index.d.ts`).
 
 ---
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Atmosync } from "../../src/core/atmosync";
-import { WeatherData, WeatherProvider } from "../../src/types";
+import { SceneConfig, WeatherData, WeatherProvider } from "../../src/types";
 
 describe("Atmosync", () => {
   let atmosync: Atmosync;
@@ -16,7 +16,7 @@ describe("Atmosync", () => {
   });
 
   it("should initialize with default scene", () => {
-    expect(atmosync.getCurrentScene()).toBe("default");
+    expect(atmosync.getCurrentScene().id).toBe("default");
   });
 
   it("should update scene and emit sceneChange on start", async () => {
@@ -26,7 +26,7 @@ describe("Atmosync", () => {
     await atmosync.start();
 
     expect(sceneListener).toHaveBeenCalledTimes(1);
-    expect(atmosync.getCurrentScene()).toMatch(/^(morning|afternoon|evening|night)-clear$/);
+    expect(atmosync.getCurrentScene().id).toMatch(/^(sunrise|sunny-day|golden-sunset|starry-night)$/);
   });
 
   it("should support manual scene override and reset", async () => {
@@ -35,12 +35,12 @@ describe("Atmosync", () => {
     const sceneListener = vi.fn();
     atmosync.on("sceneChange", sceneListener);
 
-    atmosync.setScene("stormy-night");
-    expect(atmosync.getCurrentScene()).toBe("stormy-night");
-    expect(sceneListener).toHaveBeenCalledWith("stormy-night");
+    atmosync.setScene("thunderstorm-night");
+    expect(atmosync.getCurrentScene().id).toBe("thunderstorm-night");
+    expect(sceneListener).toHaveBeenCalledWith(expect.objectContaining({ id: "thunderstorm-night" }));
 
     atmosync.resetScene();
-    expect(atmosync.getCurrentScene()).toMatch(/^(morning|afternoon|evening|night)-clear$/);
+    expect(atmosync.getCurrentScene().id).toMatch(/^(sunrise|sunny-day|golden-sunset|starry-night)$/);
   });
 
   it("should remove event listeners with off()", () => {
@@ -48,7 +48,7 @@ describe("Atmosync", () => {
     atmosync.on("sceneChange", listener);
     atmosync.off("sceneChange", listener);
 
-    atmosync.emit("sceneChange", "test-scene");
+    atmosync.emit("sceneChange", { id: "test-scene" });
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -59,7 +59,7 @@ describe("Atmosync", () => {
     atmosync.on("sceneChange", listener);
 
     atmosync.destroy();
-    atmosync.emit("sceneChange", "another-scene");
+    atmosync.emit("sceneChange", { id: "another-scene" });
 
     expect(listener).not.toHaveBeenCalled();
   });
@@ -159,7 +159,7 @@ describe("Atmosync", () => {
 
     expect(weatherListener).toHaveBeenCalled();
     expect(sync.getEnvironmentState().weather.condition).toBe("thunderstorm");
-    expect(sync.getCurrentScene()).toMatch(/-(thunderstorm)$/);
+    expect(sync.getCurrentScene().id).toMatch(/^thunderstorm-/);
 
     sync.destroy();
   });
@@ -175,7 +175,38 @@ describe("Atmosync", () => {
 
     expect(weatherListener).toHaveBeenCalledWith(expect.objectContaining({ condition: "snow" }));
     expect(sync.getEnvironmentState().weather.condition).toBe("snow");
-    expect(sync.getCurrentScene()).toMatch(/-snow$/);
+    expect(sync.getCurrentScene().id).toMatch(/^snowy-/);
+
+    sync.destroy();
+  });
+
+  it("should allow registering custom rules dynamically", async () => {
+    const sync = new Atmosync();
+    await sync.start();
+
+    const customScene: SceneConfig = {
+      id: "alien-world",
+      name: "Alien World",
+      description: "Neon skies",
+      layers: {
+        sky: { gradient: ["#FF00FF", "#00FFFF"], brightness: 0.9 },
+        celestial: { body: "none", visible: false },
+        clouds: { density: 0.5, type: "scattered" },
+        precipitation: { type: "none", intensity: 0 },
+        fog: { visible: false, density: 0 },
+        lighting: { ambientColor: "#FF00FF", isNight: false },
+      },
+    };
+
+    sync.registerCustomScene(customScene);
+    sync.registerSceneRule({
+      id: "rule-alien",
+      priority: 999,
+      match: () => true,
+      createScene: () => customScene,
+    });
+
+    expect(sync.getCurrentScene().id).toBe("alien-world");
 
     sync.destroy();
   });

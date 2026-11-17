@@ -14,6 +14,51 @@ export type WeatherCondition =
   | "snow"
   | "thunderstorm";
 
+export type CelestialBody = "sun" | "moon" | "none";
+
+export type PrecipitationType = "rain" | "snow" | "drizzle" | "none";
+
+export interface SceneLayerConfig {
+  sky: {
+    gradient: [string, string];
+    brightness: number;
+  };
+  celestial: {
+    body: CelestialBody;
+    visible: boolean;
+  };
+  clouds: {
+    density: number;
+    type: "sparse" | "scattered" | "overcast" | "none";
+  };
+  precipitation: {
+    type: PrecipitationType;
+    intensity: number;
+  };
+  fog: {
+    visible: boolean;
+    density: number;
+  };
+  lighting: {
+    ambientColor: string;
+    isNight: boolean;
+  };
+}
+
+export interface SceneConfig {
+  id: string;
+  name: string;
+  description: string;
+  layers: SceneLayerConfig;
+}
+
+export interface SceneRule {
+  id: string;
+  priority: number;
+  match: (env: EnvironmentState) => boolean;
+  createScene: (env: EnvironmentState) => SceneConfig;
+}
+
 export interface TimeState {
   hour: number;
   minute: number;
@@ -56,9 +101,7 @@ export interface SeasonState {
 
 export interface SeasonRule {
   name: string;
-  /** 1-based month (1 = January, 12 = December) */
   startMonth: number;
-  /** 1-based month (1 = January, 12 = December) */
   endMonth: number;
 }
 
