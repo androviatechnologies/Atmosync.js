@@ -22,6 +22,22 @@ export type RendererType = "css" | "canvas";
 
 export type RenderQuality = "low" | "medium" | "high";
 
+export interface ThemePalette {
+  background: string;
+  surface: string;
+  text: string;
+  textMuted: string;
+  accent: string;
+  border: string;
+}
+
+export interface TransitionOptions {
+  enabled?: boolean;
+  duration?: number;
+  easing?: string;
+  respectReducedMotion?: boolean;
+}
+
 export interface SceneLayerConfig {
   sky: {
     gradient: [string, string];
@@ -66,7 +82,7 @@ export interface SceneRule {
 export interface RendererOptions {
   type?: RendererType;
   quality?: RenderQuality;
-  target?: any; // HTMLElement or CSS selector string
+  target?: any;
   animation?: boolean;
   fpsLimit?: number;
 }
@@ -139,6 +155,12 @@ export interface EnvironmentState {
   season: SeasonState;
 }
 
+export interface ThemeOptions {
+  enabled?: boolean;
+  target?: any;
+  customPalettes?: Record<string, Partial<ThemePalette>>;
+}
+
 export interface AtmosyncOptions {
   time?: {
     enabled?: boolean;
@@ -163,6 +185,8 @@ export interface AtmosyncOptions {
     customProfiles?: Record<string, RegionalSeasonProfile>;
   };
   renderer?: RendererOptions;
+  transitions?: TransitionOptions;
+  theme?: ThemeOptions;
   initialScene?: string;
 }
 
@@ -172,6 +196,7 @@ export type AtmosyncEventType =
   | "timeUpdate"
   | "locationUpdate"
   | "seasonUpdate"
+  | "themeChange"
   | "error";
 
 export type EventCallback<T = any> = (data: T) => void;

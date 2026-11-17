@@ -220,4 +220,32 @@ describe("Atmosync", () => {
 
     sync.destroy();
   });
+
+  it("should emit themeChange and provide accessible palette", async () => {
+    const sync = new Atmosync();
+    const themeListener = vi.fn();
+    sync.on("themeChange", themeListener);
+
+    await sync.start();
+
+    expect(themeListener).toHaveBeenCalled();
+    const palette = sync.getThemePalette();
+    expect(palette).toBeDefined();
+    expect(palette?.text).toBeDefined();
+    expect(palette?.background).toBeDefined();
+
+    sync.destroy();
+  });
+
+  it("should support custom theme palette overrides", async () => {
+    const sync = new Atmosync();
+    await sync.start();
+
+    sync.setCustomThemePalette("sunny-day", { accent: "#E91E63" });
+    sync.setScene("sunny-day");
+
+    expect(sync.getThemePalette()?.accent).toBe("#E91E63");
+
+    sync.destroy();
+  });
 });

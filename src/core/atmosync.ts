@@ -5,6 +5,8 @@ import { TimeEngine } from "../engines/time";
 import { WeatherEngine } from "../engines/weather";
 import { RenderingManager } from "../renderers/manager";
 import { DEFAULT_SCENES } from "../scenes/defaults";
+import { ThemeEngine } from "../themes";
+import { TransitionEngine } from "../transitions";
 import {
   AtmosyncEventType,
   AtmosyncOptions,
@@ -13,6 +15,7 @@ import {
   RegionalSeasonProfile,
   SceneConfig,
   SceneRule,
+  ThemePalette,
   WeatherData,
   WeatherProvider,
   WeatherState,
@@ -26,6 +29,8 @@ export class Atmosync {
   private weatherEngine: WeatherEngine;
   private sceneEngine: SceneEngine;
   private renderingManager: RenderingManager;
+  private themeEngine: ThemeEngine;
+  private transitionEngine: TransitionEngine;
   private listeners: Map<AtmosyncEventType, Set<EventCallback>> = new Map();
   private currentScene: SceneConfig;
   private manualSceneOverride: SceneConfig | null = null;
@@ -56,6 +61,8 @@ export class Atmosync {
       weather: { enabled: false, provider: "open-meteo", refreshInterval: 900000, ...options.weather },
       season: { enabled: false, region: "auto", ...options.season },
       renderer: { type: "canvas", quality: "high", animation: true, ...options.renderer },
+      transitions: { enabled: true, duration: 1500, respectReducedMotion: true, ...options.transitions },
+      theme: { enabled: true, ...options.theme },
       initialScene: options.initialScene || "default",
     };
 
@@ -69,6 +76,8 @@ export class Atmosync {
     });
     this.sceneEngine = new SceneEngine();
     this.renderingManager = new RenderingManager(this.options.renderer);
+    this.themeEngine = new ThemeEngine(this.options.theme);
+    this.transitionEngine = new TransitionEngine(this.options.transitions);
 
     const initial = this.sceneEngine.getSceneById(this.options.initialScene || "default");
     this.currentScene = initial || DEFAULT_SCENES.default;
@@ -254,7 +263,25 @@ export class Atmosync {
 
   public mount(target: any): void {
     this.renderingManager.mount(target);
+    this.themeEngine.setTarget(target);
     this.renderingManager.render(this.currentScene);
+  }
+
+  public getThemePalette(): ThemePalette | null {
+    return this.themeEngine.getCurrentPalette();
+  }
+
+  public setCustomThemePalette(sceneId: string, palette: Partial<ThemePalette>): void {
+    this.themeEngine.setCustomPalette(sceneId, palette);
+    this.themeEngine.applyTheme(this.currentScene);
+  }
+
+  public isReducedMotionPreferred(): boolean {
+    return this.transitionEngine.isReducedMotionPreferred();
+  }
+
+  public getEffectiveTransitionDuration(): number {
+    return this.transitionEngine.getEffectiveDuration();
   }
 
   public getCurrentScene(): SceneConfig {
@@ -347,6 +374,10 @@ export class Atmosync {
 
     // Update renderer
     this.renderingManager.render(newScene);
+
+    // Update theme & emit themeChange
+    const palette = this.themeEngine.applyTheme(newScene);
+    this.emit("themeChange", palette);
 
     if (hasChanged) {
       this.emit("sceneChange", newScene);

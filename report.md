@@ -214,11 +214,58 @@ This document tracks the progress, implementation details, test coverage, and va
 
 ## Phase 6: Theme & Transition Engine
 
-**Status:** Pending  
-**Scope:**
-- CSS Custom Property palette generation.
-- Smooth scene blending transitions.
-- Accessibility controls (`prefers-reduced-motion`).
+**Status:** Completed  
+**Deliverables:** ThemeEngine, ThemePalette generation with accessible contrast, CSS custom properties injection, TransitionEngine with prefers-reduced-motion detection, and Atmosync reactive integration.
+
+### Key Accomplishments
+1. **Accessible Theme Palette Architecture (`src/themes/palette.ts`):**
+   - Built `generatePaletteForScene`: Computes high-contrast, accessible UI color palettes:
+     - `background`: Canvas/horizon ambient shade.
+     - `surface`: Elevated, frosted surface color for cards, dialogs, and navigation bars.
+     - `text`: High-contrast foreground text (`#FFFFFF` on dark scenes, `#1A202C` on light scenes).
+     - `textMuted`: Muted secondary text (`#A0AEC0` / `#718096`).
+     - `accent`: Atmospheric accent hue extracted from solar or horizon lighting.
+     - `border`: Harmonious semi-transparent border color.
+   - Built-in palettes for daytime, golden sunset, sunrise, starry night, rainy night, thunderstorms, and snowy atmospheres.
+   - Complete custom palette override support per scene ID.
+
+2. **Theme Engine & CSS Custom Properties (`src/themes/index.ts`):**
+   - Automatically injects and updates standardized CSS variables on target elements or `:root`:
+     - `--atmosync-bg`
+     - `--atmosync-surface`
+     - `--atmosync-text`
+     - `--atmosync-text-muted`
+     - `--atmosync-accent`
+     - `--atmosync-border`
+   - Added runtime overrides via `.setCustomPalette(sceneId, overrides)`.
+
+3. **Transition Engine & Motion Accessibility (`src/transitions/index.ts`):**
+   - Built `TransitionEngine` controlling cross-fade duration and easing curves.
+   - Full `prefers-reduced-motion` accessibility support:
+     - Queries `window.matchMedia('(prefers-reduced-motion: reduce)')`.
+     - Automatically collapses transition durations to `0ms` (instant switch) for users who prefer reduced motion.
+
+4. **Core Integration (`src/core/atmosync.ts`):**
+   - Emits reactive `themeChange` event passing `ThemePalette` alongside `sceneChange`.
+   - Exposes `.getThemePalette()`, `.setCustomThemePalette()`, `.isReducedMotionPreferred()`, and `.getEffectiveTransitionDuration()`.
+
+5. **Validation & Testing:**
+   - **Unit Tests:** 75/75 tests passing across 13 test suites:
+     - `tests/unit/theme-engine.test.ts` (5 tests)
+     - `tests/unit/transition-engine.test.ts` (3 tests)
+     - `tests/unit/atmosync.test.ts` (14 tests)
+     - `tests/unit/css-renderer.test.ts` (4 tests)
+     - `tests/unit/canvas-renderer.test.ts` (4 tests)
+     - `tests/unit/rendering-manager.test.ts` (3 tests)
+     - `tests/unit/scene-engine.test.ts` (8 tests)
+     - `tests/unit/weather-engine.test.ts` (6 tests)
+     - `tests/unit/open-meteo.test.ts` (2 tests)
+     - `tests/unit/wmo.test.ts` (8 tests)
+     - `tests/unit/location.test.ts` (7 tests)
+     - `tests/unit/season.test.ts` (5 tests)
+     - `tests/unit/time.test.ts` (6 tests)
+   - **Type Checking:** `tsc --noEmit` verified with 0 errors.
+   - **Build Verification:** Dual ESM/CJS bundles updated (`dist/index.js`, `dist/index.cjs`, `dist/index.d.ts`).
 
 ---
 
